@@ -1,0 +1,49 @@
+code: bmm
+name: "BMad Method Agile-AI Driven-Development"
+description: "AI-driven agile development framework"
+default_selected: true
+module_version: 1.0.0
+module_greeting: >
+  BMad Method is ready! Your agile-AI development workflow is configured.
+  Run this again anytime to reconfigure settings, or edit _bmad/config.yaml and config.user.yaml directly.
+
+  For questions, suggestions and support - check us on Discord at https://discord.gg/gk8jAdXWmj
+
+project_name:
+  prompt: "What is your project called?"
+  default: "{directory_name}"
+  result: "{value}"
+
+user_skill_level:
+  prompt:
+    - "What is your development experience level?"
+    - "This affects how agents explain concepts in chat."
+  default: "intermediate"
+  result: "{value}"
+  single-select:
+    - value: "beginner"
+      label: "Beginner - Explain things clearly"
+    - value: "intermediate"
+      label: "Intermediate - Balance detail with speed"
+    - value: "expert"
+      label: "Expert - Be direct and technical"
+
+planning_artifacts:
+  prompt: "Where should planning artifacts be stored? (Brainstorming, Briefs, PRDs, UX Designs, Architecture, Epics)"
+  default: "{output_folder}/planning-artifacts"
+  result: "{project-root}/{value}"
+
+implementation_artifacts:
+  prompt: "Where should implementation artifacts be stored? (Sprint status, stories, reviews, retrospectives, Quick Flow output)"
+  default: "{output_folder}/implementation-artifacts"
+  result: "{project-root}/{value}"
+
+project_knowledge:
+  prompt: "Where should long-term project knowledge be stored? (docs, research, references)"
+  default: "docs"
+  result: "{project-root}/{value}"
+
+directories:
+  - "{planning_artifacts}"
+  - "{implementation_artifacts}"
+  - "{project_knowledge}"
