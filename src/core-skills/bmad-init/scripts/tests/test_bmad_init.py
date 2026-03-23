@@ -27,6 +27,8 @@ from bmad_init import (
     find_target_module_yaml,
     load_config_file,
     load_module_config,
+    load_centralized_config,
+    load_legacy_module_config,
 )
 
 
@@ -259,6 +261,126 @@ class TestFindTargetModuleYaml(unittest.TestCase):
 
         result = find_target_module_yaml('test', self.project_root, str(skill_path))
         self.assertTrue('assets' in str(result))
+
+
+class TestLoadCentralizedConfig(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.project_root = Path(self.temp_dir)
+        (self.project_root / '_bmad').mkdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _write_config(self, content):
+        (self.project_root / '_bmad' / 'config.yaml').write_text(content)
+
+    def _write_user_config(self, content):
+        (self.project_root / '_bmad' / 'config.user.yaml').write_text(content)
+
+    def test_returns_none_when_no_centralized_config(self):
+        result = load_centralized_config('core', self.project_root)
+        self.assertIsNone(result)
+
+    def test_loads_core_only(self):
+        self._write_config(
+            'output_folder: "{project-root}/_bmad-output"\n'
+            'document_output_language: English\n'
+        )
+        result = load_centralized_config('core', self.project_root)
+        self.assertEqual(result['output_folder'], '{project-root}/_bmad-output')
+        self.assertEqual(result['document_output_language'], 'English')
+
+    def test_loads_module_merges_root_and_section(self):
+        self._write_config(
+            'output_folder: "{project-root}/_bmad-output"\n'
+            'document_output_language: English\n'
+            'bmm:\n'
+            '  code: bmm\n'
+            '  project_name: MyProject\n'
+        )
+        result = load_centralized_config('bmm', self.project_root)
+        # Root-level core keys present
+        self.assertEqual(result['output_folder'], '{project-root}/_bmad-output')
+        self.assertEqual(result['document_output_language'], 'English')
+        # Module section keys present
+        self.assertEqual(result['code'], 'bmm')
+        self.assertEqual(result['project_name'], 'MyProject')
+
+    def test_core_does_not_include_module_sections(self):
+        self._write_config(
+            'output_folder: "_bmad-output"\n'
+            'bmm:\n'
+            '  code: bmm\n'
+            '  project_name: MyProject\n'
+        )
+        result = load_centralized_config('core', self.project_root)
+        self.assertIn('output_folder', result)
+        self.assertNotIn('code', result)
+        self.assertNotIn('project_name', result)
+        self.assertNotIn('bmm', result)
+
+    def test_user_config_overlays(self):
+        self._write_config('output_folder: "_bmad-output"\n')
+        self._write_user_config(
+            'user_name: BMad\n'
+            'communication_language: English\n'
+        )
+        result = load_centralized_config('core', self.project_root)
+        self.assertEqual(result['output_folder'], '_bmad-output')
+        self.assertEqual(result['user_name'], 'BMad')
+        self.assertEqual(result['communication_language'], 'English')
+
+    def test_user_config_overrides_main(self):
+        self._write_config('communication_language: French\n')
+        self._write_user_config('communication_language: English\n')
+        result = load_centralized_config('core', self.project_root)
+        self.assertEqual(result['communication_language'], 'English')
+
+    def test_missing_module_section_returns_core_only(self):
+        self._write_config('output_folder: "_bmad-output"\n')
+        result = load_centralized_config('nonexistent', self.project_root)
+        self.assertEqual(result['output_folder'], '_bmad-output')
+        self.assertNotIn('code', result)
+
+
+class TestLoadModuleConfigFallback(unittest.TestCase):
+    """Tests that load_module_config falls back to legacy when centralized is missing."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.project_root = Path(self.temp_dir)
+        (self.project_root / '_bmad').mkdir()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_prefers_centralized_over_legacy(self):
+        # Write centralized config
+        (self.project_root / '_bmad' / 'config.yaml').write_text(
+            'output_folder: centralized\n'
+        )
+        # Write legacy config
+        legacy_dir = self.project_root / '_bmad' / 'core'
+        legacy_dir.mkdir()
+        (legacy_dir / 'config.yaml').write_text('output_folder: legacy\n')
+
+        result = load_module_config('core', self.project_root)
+        self.assertEqual(result['output_folder'], 'centralized')
+
+    def test_falls_back_to_legacy(self):
+        # No centralized config, only legacy
+        legacy_dir = self.project_root / '_bmad' / 'core'
+        legacy_dir.mkdir()
+        (legacy_dir / 'config.yaml').write_text('output_folder: legacy\n')
+
+        result = load_module_config('core', self.project_root)
+        self.assertEqual(result['output_folder'], 'legacy')
+
+    def test_returns_none_when_neither_exists(self):
+        result = load_module_config('nonexistent', self.project_root)
+        self.assertIsNone(result)
 
 
 class TestLoadConfigFile(unittest.TestCase):

@@ -1,7 +1,6 @@
 ---
 name: bmad-init
 description: "Initialize BMad project configuration and load config variables. Use when any skill needs module-specific configuration values, or when setting up a new BMad project."
-argument-hint: "[--module=module_code] [--vars=var1:default1,var2] [--skill-path=/path/to/calling/skill]"
 ---
 
 ## Overview
@@ -14,6 +13,15 @@ This skill is the configuration entry point for all BMad skills. It has two mode
 Every BMad skill should call this on activation to get its config vars. The caller never needs to know whether init happened — they just get their config back.
 
 The script `bmad_init.py` is located in this skill's `scripts/` directory. Locate and run it using python for all commands below.
+
+### Config Loading Order
+
+The load command reads config from these sources (first match wins):
+
+1. **Primary — Centralized config**: `_bmad/config.yaml` (root-level keys = core settings, module sections = per-module settings) merged with `_bmad/config.user.yaml` (user-only settings like `user_name`, `communication_language`)
+2. **Fallback — Legacy per-module files**: `_bmad/{module}/config.yaml` and `_bmad/core/config.yaml`
+
+The output is always a flat key-value dict regardless of which source was used.
 
 ## On Activation — Fast Path
 

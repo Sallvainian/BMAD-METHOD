@@ -7,9 +7,14 @@
 """
 BMad Init — Project configuration bootstrap and config loader.
 
-Config files (flat YAML per module):
-  - _bmad/core/config.yaml (core settings — user_name, language, output_folder, etc.)
-  - _bmad/{module}/config.yaml (module settings + core values merged in)
+Config files:
+  Primary (centralized):
+    - _bmad/config.yaml (root-level = core settings, module sections = per-module)
+    - _bmad/config.user.yaml (user-only settings like user_name, communication_language)
+
+  Fallback (legacy per-module):
+    - _bmad/core/config.yaml (core settings)
+    - _bmad/{module}/config.yaml (module settings + core values merged in)
 
 Usage:
   # Fast path — load all vars for a module (includes core vars)
@@ -143,11 +148,11 @@ def find_target_module_yaml(module_code, project_root, skill_path=None):
 
 
 # =============================================================================
-# Config Loading (Flat per-module files)
+# Config Loading
 # =============================================================================
 
 def load_config_file(path):
-    """Load a flat YAML config file. Returns dict or None."""
+    """Load a YAML config file. Returns dict or None."""
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
@@ -156,10 +161,64 @@ def load_config_file(path):
         return None
 
 
-def load_module_config(module_code, project_root):
-    """Load config for a specific module from _bmad/{module}/config.yaml."""
+def load_centralized_config(module_code, project_root):
+    """
+    Load config from centralized _bmad/config.yaml + _bmad/config.user.yaml.
+
+    Merges root-level keys (non-dict = core settings) + module section keys
+    + user config keys into one flat dict.
+
+    Returns merged dict, or None if _bmad/config.yaml doesn't exist.
+    """
+    root = Path(project_root)
+    main_config_path = root / '_bmad' / 'config.yaml'
+    main_config = load_config_file(main_config_path)
+    if main_config is None:
+        return None
+
+    # Separate root-level (core) keys from module sections
+    core_keys = {}
+    module_sections = {}
+    for key, value in main_config.items():
+        if isinstance(value, dict):
+            module_sections[key] = value
+        else:
+            core_keys[key] = value
+
+    # Start with core keys
+    merged = dict(core_keys)
+
+    # If a specific module was requested (not 'core'), overlay its section
+    if module_code and module_code != 'core':
+        module_section = module_sections.get(module_code, {})
+        merged.update(module_section)
+
+    # Overlay user config
+    user_config_path = root / '_bmad' / 'config.user.yaml'
+    user_config = load_config_file(user_config_path)
+    if user_config:
+        merged.update(user_config)
+
+    return merged if merged else None
+
+
+def load_legacy_module_config(module_code, project_root):
+    """Load config from legacy per-module file _bmad/{module}/config.yaml."""
     config_path = Path(project_root) / '_bmad' / module_code / 'config.yaml'
     return load_config_file(config_path)
+
+
+def load_module_config(module_code, project_root):
+    """
+    Load config for a module. Tries centralized format first, falls back to legacy.
+
+    Primary: _bmad/config.yaml + _bmad/config.user.yaml (centralized)
+    Fallback: _bmad/{module}/config.yaml (legacy per-module)
+    """
+    config = load_centralized_config(module_code, project_root)
+    if config is not None:
+        return config
+    return load_legacy_module_config(module_code, project_root)
 
 
 def resolve_project_root_placeholder(value, project_root):
