@@ -34,7 +34,7 @@ modules:
 
   bmad-method-test-architecture-enterprise:
     url: https://github.com/bmad-code-org/bmad-method-test-architecture-enterprise
-    module-definition: src/module.yaml
+    module-definition: src/skills/module.yaml
     code: tea
     name: "Test Architect"
     description: "Master Test Architect for quality strategy, test automation, and release gates"
