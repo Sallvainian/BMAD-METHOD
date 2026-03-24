@@ -85,7 +85,7 @@ class ModuleManager {
 
   /**
    * List all available modules (excluding core which is always installed)
-   * bmm is the only built-in module, directly under src/bmm-skills
+   * bmm is the only built-in module, under src/skills
    * All other modules come from external-official-modules.yaml
    * @returns {Object} Object with modules array and customModules array
    */
@@ -93,10 +93,10 @@ class ModuleManager {
     const modules = [];
     const customModules = [];
 
-    // Add built-in bmm module (directly under src/bmm-skills)
-    const bmmPath = getSourcePath('bmm-skills');
+    // Add built-in bmm module (under src/skills)
+    const bmmPath = getSourcePath('skills');
     if (await fs.pathExists(bmmPath)) {
-      const bmmInfo = await this.getModuleInfo(bmmPath, 'bmm', 'src/bmm-skills');
+      const bmmInfo = await this.getModuleInfo(bmmPath, 'bmm', 'src/skills');
       if (bmmInfo) {
         modules.push(bmmInfo);
       }
@@ -150,7 +150,7 @@ class ModuleManager {
 
     // Mark as custom if it's using custom.yaml OR if it's outside src/bmm or src/core
     const isCustomSource =
-      sourceDescription !== 'src/bmm-skills' && sourceDescription !== 'src/core-skills' && sourceDescription !== 'src/modules';
+      sourceDescription !== 'src/skills' && sourceDescription !== 'src/core-skills' && sourceDescription !== 'src/modules';
     const moduleInfo = {
       id: defaultName,
       path: modulePath,
@@ -199,9 +199,9 @@ class ModuleManager {
       return this.customModulePaths.get(moduleCode);
     }
 
-    // Check for built-in bmm module (directly under src/bmm-skills)
+    // Check for built-in bmm module (under src/skills)
     if (moduleCode === 'bmm') {
-      const bmmPath = getSourcePath('bmm-skills');
+      const bmmPath = getSourcePath('skills');
       if (await fs.pathExists(bmmPath)) {
         return bmmPath;
       }
